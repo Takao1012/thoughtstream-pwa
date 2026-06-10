@@ -303,6 +303,12 @@
     </div>
 
     <div class="settings-section">
+      <div class="settings-label">API キー</div>
+      <input class="settings-input" id="api-key" type="password" placeholder="ck_xxxxxxxxxxxxxxxx">
+      <div class="settings-hint">Craft → Settings → Imagine タブ → API connection → APIキーを作成</div>
+    </div>
+
+    <div class="settings-section">
       <div class="settings-label">Inbox ドキュメントID</div>
       <input class="settings-input" id="doc-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
       <div class="settings-hint">
@@ -335,6 +341,7 @@ const settingsView = document.getElementById('settings-view');
 const toggleBtn = document.getElementById('toggle-btn');
 const headerTitle = document.getElementById('header-title');
 const apiUrlEl = document.getElementById('api-url');
+const apiKeyEl = document.getElementById('api-key');
 const docIdEl = document.getElementById('doc-id');
 const saveBtn = document.getElementById('save-btn');
 const saveStatus = document.getElementById('save-status');
@@ -344,6 +351,7 @@ let isSettings = false;
 
 const cfg = () => ({
   apiUrl: localStorage.getItem('ts_api_url') || '',
+  apiKey: localStorage.getItem('ts_api_key') || '',
   docId: localStorage.getItem('ts_doc_id') || ''
 });
 
@@ -360,8 +368,8 @@ setInterval(updateDatetime, 30000);
 
 function updateBtn() {
   const len = memoEl.value.length;
-  const { apiUrl, docId } = cfg();
-  postBtn.disabled = len === 0 || len > MAX || !apiUrl || !docId;
+  const { apiUrl, apiKey, docId } = cfg();
+  postBtn.disabled = len === 0 || len > MAX || !apiUrl || !apiKey || !docId;
   charCount.textContent = len;
   charCount.className = 'char-count' + (len > MAX ? ' over' : len > MAX * 0.8 ? ' warn' : '');
 }
@@ -392,7 +400,7 @@ function showStatus(msg, type, keep) {
 postBtn.addEventListener('click', async () => {
   const text = memoEl.value.trim();
   if (!text) return;
-  const { apiUrl, docId } = cfg();
+  const { apiUrl, apiKey, docId } = cfg();
 
   postBtn.disabled = true;
   postBtn.textContent = '保存中...';
@@ -404,7 +412,10 @@ postBtn.addEventListener('click', async () => {
 
     const res = await fetch(`${apiUrl}/blocks`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
         blocks: [{ markdown }],
         position: { pageId: docId, position: 'end' }
@@ -437,10 +448,11 @@ toggleBtn.addEventListener('click', () => {
     headerTitle.textContent = '設定';
     toggleBtn.querySelector('i').className = 'ti ti-arrow-left';
     toggleBtn.setAttribute('aria-label', '戻る');
-    const { apiUrl, docId } = cfg();
+    const { apiUrl, apiKey, docId } = cfg();
     apiUrlEl.value = apiUrl;
+    apiKeyEl.value = apiKey;
     docIdEl.value = docId;
-    configWarnBox.style.display = (!apiUrl || !docId) ? 'flex' : 'none';
+    configWarnBox.style.display = (!apiUrl || !apiKey || !docId) ? 'flex' : 'none';
   } else {
     mainView.classList.remove('hidden');
     settingsView.classList.remove('active');
@@ -454,13 +466,15 @@ toggleBtn.addEventListener('click', () => {
 
 saveBtn.addEventListener('click', () => {
   const url = apiUrlEl.value.trim();
+  const key = apiKeyEl.value.trim();
   const id = docIdEl.value.trim();
-  if (!url || !id) {
-    saveStatus.textContent = 'URLとIDを両方入力してください';
+  if (!url || !key || !id) {
+    saveStatus.textContent = 'URL・APIキー・IDをすべて入力してください';
     saveStatus.style.color = '#E24B4A';
     return;
   }
   localStorage.setItem('ts_api_url', url);
+  localStorage.setItem('ts_api_key', key);
   localStorage.setItem('ts_doc_id', id);
   saveStatus.textContent = '保存しました ✓';
   saveStatus.style.color = '#1D9E75';
@@ -469,8 +483,8 @@ saveBtn.addEventListener('click', () => {
   updateBtn();
 });
 
-if (!cfg().apiUrl || !cfg().docId) {
-  setTimeout(() => showStatus('設定からAPI URLを入力してください', 'error', true), 300);
+if (!cfg().apiUrl || !cfg().apiKey || !cfg().docId) {
+  setTimeout(() => showStatus('設定からAPI情報を入力してください', 'error', true), 300);
 }
 </script>
 
