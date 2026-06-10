@@ -417,7 +417,7 @@ postBtn.addEventListener('click', async () => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        blocks: [{ type: 'text', markdown }],
+        markdown,
         position: { pageId: docId, position: 'end' }
       })
     });
