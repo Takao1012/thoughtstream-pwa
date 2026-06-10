@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Inbox">
+<meta name="theme-color" content="#ffffff">
+<title>ThoughtStream Inbox</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Hiragino Sans', sans-serif;
+    background: #f5f5f3;
+    color: #1a1a1a;
+  }
+  .app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100%;
+    margin: 0 auto;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ヘッダー */
+  .header {
+    padding: env(safe-area-inset-top, 16px) 20px 12px;
+    padding-top: max(env(safe-area-inset-top), 16px);
+    border-bottom: 0.5px solid rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .app-name {
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+  }
+  .header-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: #666;
+    transition: background 0.15s;
+  }
+  .header-btn:hover { background: #f0f0f0; }
+  .header-btn i { font-size: 20px; }
+
+  /* メイン入力 */
+  .main-view { display: flex; flex-direction: column; flex: 1; }
+  .main-view.hidden { display: none; }
+
+  .memo-area {
+    flex: 1;
+    padding: 16px 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .datetime-label {
+    font-size: 12px;
+    color: #999;
+    font-variant-numeric: tabular-nums;
+  }
+  textarea#memo {
+    flex: 1;
+    min-height: 180px;
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #1a1a1a;
+    background: transparent;
+    resize: none;
+    font-family: inherit;
+  }
+  textarea#memo::placeholder { color: #bbb; }
+
+  .divider { height: 0.5px; background: rgba(0,0,0,0.08); margin: 0 20px; }
+
+  .tag-row {
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tag-icon { font-size: 16px; color: #bbb; }
+  input#tags {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #555;
+    background: transparent;
+    font-family: inherit;
+  }
+  input#tags::placeholder { color: #bbb; }
+  .char-count {
+    font-size: 12px;
+    color: #ccc;
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: right;
+  }
+  .char-count.warn { color: #EF9F27; }
+  .char-count.over { color: #E24B4A; }
+
+  .bottom-bar {
+    padding: 12px 20px;
+    padding-bottom: max(env(safe-area-inset-bottom), 12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+    gap: 12px;
+  }
+  .status-msg {
+    font-size: 13px;
+    color: #888;
+    flex: 1;
+    min-height: 20px;
+  }
+  .status-msg.success { color: #1D9E75; }
+  .status-msg.error { color: #E24B4A; }
+
+  .post-btn {
+    height: 40px;
+    padding: 0 22px;
+    border-radius: 20px;
+    border: none;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  .post-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .post-btn:not(:disabled):active { transform: scale(0.97); opacity: 0.85; }
+
+  /* 設定画面 */
+  .settings-view {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    padding: 20px;
+    gap: 20px;
+    overflow-y: auto;
+  }
+  .settings-view.active { display: flex; }
+
+  .config-warn {
+    background: #FAEEDA;
+    border: 0.5px solid #EF9F27;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #633806;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+  }
+  .config-warn i { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  .settings-section { display: flex; flex-direction: column; gap: 6px; }
+  .settings-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  .settings-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 0.5px solid rgba(0,0,0,0.15);
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1a1a1a;
+    background: #f8f8f6;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .settings-input:focus { border-color: rgba(0,0,0,0.4); background: #fff; }
+  .settings-hint {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.5;
+  }
+  .settings-hint a { color: #555; }
+
+  .save-btn {
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .save-btn:active { opacity: 0.75; }
+
+  .save-status {
+    font-size: 13px;
+    text-align: center;
+    min-height: 20px;
+  }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a1a;
+    padding-bottom: 12px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.08);
+  }
+
+  .help-block {
+    background: #f8f8f6;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+  }
+  .help-block code {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #444;
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <span class="app-name" id="header-title">Inbox</span>
+    <button class="header-btn" id="toggle-btn" aria-label="設定">
+      <i class="ti ti-settings" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- メイン入力 -->
+  <div class="main-view" id="main-view">
+    <div class="memo-area">
+      <div class="datetime-label" id="datetime-label"></div>
+      <textarea id="memo" placeholder="今何を考えてる？"></textarea>
+    </div>
+    <div class="divider"></div>
+    <div class="tag-row">
+      <i class="ti ti-tag tag-icon" aria-hidden="true"></i>
+      <input id="tags" type="text" placeholder="タグ（任意）　例: ブログ アイデア">
+      <span class="char-count" id="char-count">0</span>
+    </div>
+    <div class="divider"></div>
+    <div class="bottom-bar">
+      <span class="status-msg" id="status-msg"></span>
+      <button class="post-btn" id="post-btn" disabled>投稿</button>
+    </div>
+  </div>
+
+  <!-- 設定画面 -->
+  <div class="settings-view" id="settings-view">
+    <div class="section-title">Craft API 設定</div>
+
+    <div id="config-warn-box" class="config-warn" style="display:none;">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+      <span>API URLとドキュメントIDを設定してください。設定が完了するまでメモを投稿できません。</span>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Craft API URL</div>
+      <input class="settings-input" id="api-url" type="url" placeholder="https://connect.craft.do/api/v1/xxxxx">
+      <div class="settings-hint">Craft → Settings → Imagine タブ → API connection で発行したURL</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Inbox ドキュメントID</div>
+      <input class="settings-input" id="doc-id" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <div class="settings-hint">
+        CraftでInboxドキュメントを開いて URL から取得。<br>
+        例: <code>https://docs.craft.do/editor/d/スペースID/<b>ドキュメントID</b></code>
+      </div>
+    </div>
+
+    <button class="save-btn" id="save-btn">保存</button>
+    <div class="save-status" id="save-status"></div>
+
+    <div class="help-block">
+      <b>メモの保存形式</b><br>
+      <code><b>[2026-06-10 14:32]</b> メモ本文 #タグ</code><br><br>
+      日時は自動付与。タグはスペースまたはカンマ区切りで複数入力可。
+    </div>
+  </div>
+</div>
+
+<script>
+const MAX = 500;
+const memoEl = document.getElementById('memo');
+const tagsEl = document.getElementById('tags');
+const postBtn = document.getElementById('post-btn');
+const charCount = document.getElementById('char-count');
+const statusMsg = document.getElementById('status-msg');
+const datetimeLabel = document.getElementById('datetime-label');
+const mainView = document.getElementById('main-view');
+const settingsView = document.getElementById('settings-view');
+const toggleBtn = document.getElementById('toggle-btn');
+const headerTitle = document.getElementById('header-title');
+const apiUrlEl = document.getElementById('api-url');
+const docIdEl = document.getElementById('doc-id');
+const saveBtn = document.getElementById('save-btn');
+const saveStatus = document.getElementById('save-status');
+const configWarnBox = document.getElementById('config-warn-box');
+
+let isSettings = false;
+
+const cfg = () => ({
+  apiUrl: localStorage.getItem('ts_api_url') || '',
+  docId: localStorage.getItem('ts_doc_id') || ''
+});
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function nowStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function updateDatetime() { datetimeLabel.textContent = nowStr(); }
+updateDatetime();
+setInterval(updateDatetime, 30000);
+
+function updateBtn() {
+  const len = memoEl.value.length;
+  const { apiUrl, docId } = cfg();
+  postBtn.disabled = len === 0 || len > MAX || !apiUrl || !docId;
+  charCount.textContent = len;
+  charCount.className = 'char-count' + (len > MAX ? ' over' : len > MAX * 0.8 ? ' warn' : '');
+}
+
+memoEl.addEventListener('input', () => {
+  updateBtn();
+  localStorage.setItem('ts_draft', memoEl.value);
+});
+tagsEl.addEventListener('input', () => localStorage.setItem('ts_draft_tags', tagsEl.value));
+
+const d = localStorage.getItem('ts_draft');
+const t = localStorage.getItem('ts_draft_tags');
+if (d) memoEl.value = d;
+if (t) tagsEl.value = t;
+updateBtn();
+
+tagsEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); memoEl.focus(); } });
+memoEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !postBtn.disabled) { e.preventDefault(); postBtn.click(); }
+});
+
+function showStatus(msg, type, keep) {
+  statusMsg.textContent = msg;
+  statusMsg.className = 'status-msg ' + type;
+  if (!keep) setTimeout(() => { statusMsg.textContent = ''; statusMsg.className = 'status-msg'; }, 4000);
+}
+
+postBtn.addEventListener('click', async () => {
+  const text = memoEl.value.trim();
+  if (!text) return;
+  const { apiUrl, docId } = cfg();
+
+  postBtn.disabled = true;
+  postBtn.textContent = '保存中...';
+
+  try {
+    const ts = nowStr();
+    const tags = tagsEl.value.trim().split(/[\s,]+/).filter(Boolean).map(t => '#' + t).join(' ');
+    const markdown = `**[${ts}]** ${text}${tags ? '  ' + tags : ''}`;
+
+    const res = await fetch(`${apiUrl}/blocks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        blocks: [{ markdown }],
+        position: { pageId: docId, position: 'end' }
+      })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    memoEl.value = '';
+    tagsEl.value = '';
+    localStorage.removeItem('ts_draft');
+    localStorage.removeItem('ts_draft_tags');
+    updateBtn();
+    updateDatetime();
+    showStatus('Craftに保存しました ✓', 'success');
+    memoEl.focus();
+  } catch(e) {
+    showStatus('エラー: ' + e.message, 'error');
+  }
+
+  postBtn.textContent = '投稿';
+  updateBtn();
+});
+
+toggleBtn.addEventListener('click', () => {
+  isSettings = !isSettings;
+  if (isSettings) {
+    mainView.classList.add('hidden');
+    settingsView.classList.add('active');
+    headerTitle.textContent = '設定';
+    toggleBtn.querySelector('i').className = 'ti ti-arrow-left';
+    toggleBtn.setAttribute('aria-label', '戻る');
+    const { apiUrl, docId } = cfg();
+    apiUrlEl.value = apiUrl;
+    docIdEl.value = docId;
+    configWarnBox.style.display = (!apiUrl || !docId) ? 'flex' : 'none';
+  } else {
+    mainView.classList.remove('hidden');
+    settingsView.classList.remove('active');
+    headerTitle.textContent = 'Inbox';
+    toggleBtn.querySelector('i').className = 'ti ti-settings';
+    toggleBtn.setAttribute('aria-label', '設定');
+    updateBtn();
+    memoEl.focus();
+  }
+});
+
+saveBtn.addEventListener('click', () => {
+  const url = apiUrlEl.value.trim();
+  const id = docIdEl.value.trim();
+  if (!url || !id) {
+    saveStatus.textContent = 'URLとIDを両方入力してください';
+    saveStatus.style.color = '#E24B4A';
+    return;
+  }
+  localStorage.setItem('ts_api_url', url);
+  localStorage.setItem('ts_doc_id', id);
+  saveStatus.textContent = '保存しました ✓';
+  saveStatus.style.color = '#1D9E75';
+  configWarnBox.style.display = 'none';
+  setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+  updateBtn();
+});
+
+if (!cfg().apiUrl || !cfg().docId) {
+  setTimeout(() => showStatus('設定からAPI URLを入力してください', 'error', true), 300);
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
